@@ -156,17 +156,26 @@ class App < Sinatra::Base
 
     sleep 1.0
 
-    rows = db.query('SELECT id FROM channel').to_a
-    channel_ids = rows.map { |row| row['id'] }
+    statement = db.prepare(
+      <<~SQL
+        SELECT
+          channel.id AS channel_id,
+          haveread.id AS haveread_id
+        FROM channel
+        LEFT OUTER JOIN haveread 
+          ON channel.id = haveread.channel_id
+          AND haveread.user_id = ?
+      SQL
+    )
+    rows = statement.execute(user_id)
+    statement.close
 
-    res = []
-    channel_ids.each do |channel_id|
-      statement = db.prepare('SELECT * FROM haveread WHERE user_id = ? AND channel_id = ?')
-      row = statement.execute(user_id, channel_id).first
-      statement.close
+    res = rows.map do |row|
+      channel_id = row['channel_id']
+
       r = {}
       r['channel_id'] = channel_id
-      r['unread'] = if row.nil?
+      r['unread'] = if row['haveread_id'].nil?
         statement = db.prepare('SELECT COUNT(*) as cnt FROM message WHERE channel_id = ?')
         statement.execute(channel_id).first['cnt']
       else
@@ -174,7 +183,7 @@ class App < Sinatra::Base
         statement.execute(channel_id, row['message_id']).first['cnt']
       end
       statement.close
-      res << r
+      r
     end
 
     content_type :json
