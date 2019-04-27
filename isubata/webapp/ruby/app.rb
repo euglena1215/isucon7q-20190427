@@ -123,12 +123,12 @@ class App < Sinatra::Base
     statement = db.prepare(
       <<~SQL
         SELECT
-          message.id,
-          message.created_at,
-          message.content,
-          user.name,
-          user.display_name,
-          user.avatar_icon
+          message.id AS message_id,
+          message.created_at AS message_created_at,
+          message.content AS message_content,
+          user.name AS user_name,
+          user.display_name AS user_display_name,
+          user.avatar_icon AS user_avatar_icon
         FROM message
         INNER JOIN user ON user.id = message.user_id
         WHERE id > ?
@@ -141,14 +141,14 @@ class App < Sinatra::Base
 
     response = rows.map do |row|
       r = {}
-      r['id'] = row['message.id']
+      r['id'] = row['message_id']
       r['user'] = {
-        'name' => row['user.name'],
-        'display_name' => row['user.display_name'],
-        'avatar_icon' => row['user.avatar_icon']
+        'name' => row['user_name'],
+        'display_name' => row['user_display_name'],
+        'avatar_icon' => row['user_avatar_icon']
       }
-      r['date'] = row['message.created_at'].strftime("%Y/%m/%d %H:%M:%S")
-      r['content'] = row['message.content']
+      r['date'] = row['message_created_at'].strftime("%Y/%m/%d %H:%M:%S")
+      r['content'] = row['message_content']
     end
     response.reverse!
 
