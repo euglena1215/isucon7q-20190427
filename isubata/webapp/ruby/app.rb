@@ -1,6 +1,7 @@
 require 'digest/sha1'
 require 'mysql2'
 require 'sinatra/base'
+require './image_handler'
 
 class App < Sinatra::Base
   configure do
@@ -328,7 +329,7 @@ class App < Sinatra::Base
     ext = file_name.include?('.') ? File.extname(file_name) : ''
     mime = ext2mime(ext)
     if !row.nil? && !mime.empty?
-      
+      ImageHandler.save_icon_image(file_name,row['data'])
       content_type mime
       return row['data']
     end
