@@ -45,7 +45,7 @@ bind-address		= 127.0.0.1
 # * Fine Tuning
 #
 key_buffer_size		= 16M
-max_allowed_packet	= 16M
+max_allowed_packet	= 1G
 thread_stack		= 192K
 thread_cache_size       = 8
 # This replaces the startup script and checks MyISAM tables if needed
@@ -102,3 +102,7 @@ max_binlog_size   = 100M
 # ssl-ca=/etc/mysql/cacert.pem
 # ssl-cert=/etc/mysql/server-cert.pem
 # ssl-key=/etc/mysql/server-key.pem
+
+innodb_flush_method = O_DIRECT
+innodb_flush_log_at_trx_commit = 2
+innodb_buffer_pool_size        = 2G
