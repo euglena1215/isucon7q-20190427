@@ -328,6 +328,7 @@ class App < Sinatra::Base
     ext = file_name.include?('.') ? File.extname(file_name) : ''
     mime = ext2mime(ext)
     if !row.nil? && !mime.empty?
+      
       content_type mime
       return row['data']
     end
