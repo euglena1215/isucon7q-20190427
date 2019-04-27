@@ -120,19 +120,35 @@ class App < Sinatra::Base
 
     channel_id = params[:channel_id].to_i
     last_message_id = params[:last_message_id].to_i
-    statement = db.prepare('SELECT * FROM message WHERE id > ? AND channel_id = ? ORDER BY id DESC LIMIT 100')
+    statement = db.prepare(
+      <<~SQL
+        SELECT
+          message.id,
+          message.created_at,
+          message.content,
+          user.name,
+          user.display_name,
+          user.avatar_icon
+        FROM message
+        INNER JOIN user ON user.id = message.user_id
+        WHERE id > ?
+        AND channel_id = ?
+        ORDER BY id DESC LIMIT 100
+      SQL
+    )
     rows = statement.execute(last_message_id, channel_id).to_a
     statement.close
-    response = []
-    rows.each do |row|
+
+    response = rows.map do |row|
       r = {}
-      r['id'] = row['id']
-      statement = db.prepare('SELECT name, display_name, avatar_icon FROM user WHERE id = ?')
-      r['user'] = statement.execute(row['user_id']).first
-      r['date'] = row['created_at'].strftime("%Y/%m/%d %H:%M:%S")
-      r['content'] = row['content']
-      response << r
-      statement.close
+      r['id'] = row['message.id']
+      r['user'] = {
+        'name' => row['user.name'],
+        'display_name' => row['user.display_name'],
+        'avatar_icon' => row['user.avatar_icon']
+      }
+      r['date'] = row['message.created_at'].strftime("%Y/%m/%d %H:%M:%S")
+      r['content'] = row['message.content']
     end
     response.reverse!
 
