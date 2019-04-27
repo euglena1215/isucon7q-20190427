@@ -1,0 +1,57 @@
+#!/bin/bash
+
+while getopts fh OPT
+do
+    case $OPT in
+        "f") FLAG_FORCE="TRUE" ;;
+        "h") FLAG_HELP="TRUE" ;;
+        * ) FLAG_HELP="TRUE" ;;
+    esac
+done
+shift `expr $OPTIND - 1`
+
+TARGET_VERSION="$1"
+LOCATION="$2"
+
+if [ "x"$FLAG_HELP != "x" -o "x$LOCATION" = "x" ]; then
+    echo "[usage] python-install [-f] VERSION LOCATION"
+    echo "  ex: python-install 2.7.6 ~/local/python-2.7.6"
+    exit 0
+fi
+
+cd $(dirname $0)
+XBUILD_PATH=$(pwd)
+
+if [ ! -d ./var/python-build ]; then
+    (
+        set -e
+        mkdir -p var
+        cd var
+        git clone -q https://github.com/yyuu/pyenv.git pyenv-repo
+        cd pyenv-repo/plugins/python-build
+        PREFIX="$XBUILD_PATH"/var/python-build ./install.sh >/dev/null 2>&1
+    )
+    if [ $? -ne 0 ]; then
+        echo "failed to download python-build"
+        exit 1
+    fi
+fi
+
+if [ "x"$FLAG_FORCE = "x" -a -d "$LOCATION" -a -x "$LOCATION/bin/python" ]; then
+    current_ver=$("$LOCATION"/bin/python -V  2>&1 )
+    if [ "x$current_ver" = "xPython $TARGET_VERSION" ]; then
+        echo "python $TARGET_VERSION already installed on $LOCATION"
+        echo "To do force re-install, use '-f' option"
+        exit 0
+    fi
+fi
+
+echo "Start to build python $TARGET_VERSION ..."
+./var/python-build/bin/python-build "$TARGET_VERSION" "$LOCATION" > /tmp/$USER-python-install.log 2>&1
+if [ $? -ne 0 ]; then
+    echo "python-build failed. see log: /tmp/$USER-python-install.log"
+    exit 1
+fi
+
+echo "python $TARGET_VERSION successfully installed on $LOCATION"
+echo "To use this python, do 'export PATH=$LOCATION/bin:\$PATH'."
