@@ -1,0 +1,15 @@
+.aliases
+.bash_history
+.bash_logout
+.bash_profile
+.bashrc
+.bundle/
+.cache/
+.gem/
+.gitconfig
+.mysql_history
+.profile
+.ssh/
+.viminfo
+.vimrc
+local/
