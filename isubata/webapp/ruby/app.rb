@@ -198,19 +198,35 @@ class App < Sinatra::Base
     @page = @page.to_i
 
     n = 20
-    statement = db.prepare('SELECT * FROM message WHERE channel_id = ? ORDER BY id DESC LIMIT ? OFFSET ?')
+    statement = db.prepare(
+      <<~SQL
+        SELECT
+          message.id AS message_id,
+          message.created_at AS message_created_at,
+          message.content AS message_content,
+          user.name AS user_name,
+          user.display_name AS user_display_name,
+          user.avatar_icon AS user_avatar_icon
+        FROM message
+        LEFT OUTER JOIN user ON message.user_id = user.id
+        WHERE channel_id = ?
+        ORDER BY id DESC
+        LIMIT ?
+        OFFSET ?
+      SQL
+    )
     rows = statement.execute(@channel_id, n, (@page - 1) * n).to_a
     statement.close
-    @messages = []
-    rows.each do |row|
+    @messages = rows.map do |row|
       r = {}
-      r['id'] = row['id']
-      statement = db.prepare('SELECT name, display_name, avatar_icon FROM user WHERE id = ?')
-      r['user'] = statement.execute(row['user_id']).first
-      r['date'] = row['created_at'].strftime("%Y/%m/%d %H:%M:%S")
-      r['content'] = row['content']
-      @messages << r
-      statement.close
+      r['id'] = row['message_id']
+      r['user'] = {
+        'name' => row['user_name'],
+        'display_name' => row['user_display_name'],
+        'avatar_icon' => row['user_avatar_icon']
+      }
+      r['date'] = row['message_created_at'].strftime("%Y/%m/%d %H:%M:%S")
+      r['content'] = row['message_content']
     end
     @messages.reverse!
 
