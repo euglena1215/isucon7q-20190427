@@ -30,9 +30,9 @@ class RedisClient
     end
 
     def reset_message_cnt
-        keys = @@redis.keys("isu:message_cnt:*")
-        return if keys.empty?
-        @@redis.del(*keys)
+      keys = @@redis.keys("isu:message_cnt:*")
+      return if keys.empty?
+      @@redis.del(*keys)
     end
 
     def get_message_cnt(channel_id)
