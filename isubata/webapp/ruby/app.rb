@@ -384,10 +384,12 @@ class App < Sinatra::Base
   def get_channel_list_info(focus_channel_id = nil)
     channels = db.query('SELECT * FROM channel ORDER BY id').to_a
     description = ''
-    channels.each do |channel|
-      if channel['id'] == focus_channel_id
-        description = channel['description']
-        break
+    if focus_channel_id
+      channels.each do |channel|
+        if channel['id'] == focus_channel_id
+          description = channel['description']
+          break
+        end
       end
     end
     [channels, description]
