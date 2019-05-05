@@ -41,7 +41,7 @@ class App < Sinatra::Base
     db.query("DELETE FROM channel WHERE id > 10")
     db.query("DELETE FROM message WHERE id > 10000")
     RedisClient.reset_last_message_id
-    RedisClient.initialize_message_cnt(db.query("SELECT channel_id, COUNT(*) as cnt FROM message GROUP BY channel_id").to_a)
+    RedisClient.initialize_message_cnt(db.query("SELECT channel_id, COUNT(1) as cnt FROM message GROUP BY channel_id").to_a)
     204
   end
 
@@ -88,7 +88,7 @@ class App < Sinatra::Base
 
   post '/login' do
     name = params[:name]
-    statement = db.prepare('SELECT * FROM user WHERE name = ?')
+    statement = db.prepare('SELECT id, password, salt FROM user WHERE name = ?')
     row = statement.execute(name).first
     statement.close
     if row.nil? || row['password'] != Digest::SHA1.hexdigest(row['salt'] + params[:password])
@@ -180,7 +180,7 @@ class App < Sinatra::Base
       r['unread'] = if last_message_id.nil?
         RedisClient.get_message_cnt(channel_id)
       else
-        statement = db.prepare('SELECT COUNT(*) as cnt FROM message WHERE channel_id = ? AND ? < id')
+        statement = db.prepare('SELECT COUNT(1) as cnt FROM message WHERE channel_id = ? AND ? < id')
         cnt = statement.execute(channel_id, last_message_id).first['cnt']
         statement.close
         cnt
@@ -242,7 +242,7 @@ class App < Sinatra::Base
     end
     @messages.reverse!
 
-    statement = db.prepare('SELECT COUNT(*) as cnt FROM message WHERE channel_id = ?')
+    statement = db.prepare('SELECT COUNT(1) as cnt FROM message WHERE channel_id = ?')
     cnt = statement.execute(@channel_id).first['cnt'].to_f
     statement.close
     @max_page = cnt == 0 ? 1 :(cnt / n).ceil
@@ -353,7 +353,7 @@ class App < Sinatra::Base
 
   get '/icons/:file_name' do
     file_name = params[:file_name]
-    statement = db.prepare('SELECT * FROM image WHERE name = ?')
+    statement = db.prepare('SELECT data FROM image WHERE name = ?')
     row = statement.execute(file_name).first
     statement.close
     ext = file_name.include?('.') ? File.extname(file_name) : ''
