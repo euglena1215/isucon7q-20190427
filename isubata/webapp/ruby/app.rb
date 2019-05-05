@@ -210,7 +210,7 @@ class App < Sinatra::Base
         FROM message
         LEFT OUTER JOIN user ON message.user_id = user.id
         WHERE channel_id = ?
-        ORDER BY id DESC
+        ORDER BY message.id DESC
         LIMIT ?
         OFFSET ?
       SQL
@@ -260,7 +260,7 @@ class App < Sinatra::Base
     @self_profile = user['id'] == @user['id']
     erb :profile
   end
-  
+
   get '/add_channel' do
     if user.nil?
       return redirect '/login', 303
