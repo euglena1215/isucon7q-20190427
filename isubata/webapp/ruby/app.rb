@@ -120,23 +120,40 @@ class App < Sinatra::Base
 
     channel_id = params[:channel_id].to_i
     last_message_id = params[:last_message_id].to_i
-    statement = db.prepare('SELECT * FROM message WHERE id > ? AND channel_id = ? ORDER BY id DESC LIMIT 100')
+    statement = db.prepare(
+      <<~SQL
+        SELECT
+          message.id AS message_id,
+          message.created_at AS message_created_at,
+          message.content AS message_content,
+          user.name AS user_name,
+          user.display_name AS user_display_name,
+          user.avatar_icon AS user_avatar_icon
+        FROM message
+        INNER JOIN user ON user.id = message.user_id
+        WHERE message.id > ?
+        AND message.channel_id = ?
+        ORDER BY message.id DESC LIMIT 100
+      SQL
+    )
     rows = statement.execute(last_message_id, channel_id).to_a
     statement.close
-    response = []
-    rows.each do |row|
+
+    response = rows.map do |row|
       r = {}
-      r['id'] = row['id']
-      statement = db.prepare('SELECT name, display_name, avatar_icon FROM user WHERE id = ?')
-      r['user'] = statement.execute(row['user_id']).first
-      r['date'] = row['created_at'].strftime("%Y/%m/%d %H:%M:%S")
-      r['content'] = row['content']
-      response << r
-      statement.close
+      r['id'] = row['message_id']
+      r['user'] = {
+        'name' => row['user_name'],
+        'display_name' => row['user_display_name'],
+        'avatar_icon' => row['user_avatar_icon']
+      }
+      r['date'] = row['message_created_at'].strftime("%Y/%m/%d %H:%M:%S")
+      r['content'] = row['message_content']
+      r
     end
     response.reverse!
 
-    max_message_id = rows.empty? ? 0 : rows.map { |row| row['id'] }.max
+    max_message_id = rows.empty? ? 0 : rows.map { |row| row['message_id'] }.max
     statement = db.prepare([
       'INSERT INTO haveread (user_id, channel_id, message_id, updated_at, created_at) ',
       'VALUES (?, ?, ?, NOW(), NOW()) ',
@@ -244,7 +261,7 @@ class App < Sinatra::Base
     @self_profile = user['id'] == @user['id']
     erb :profile
   end
-  
+
   get '/add_channel' do
     if user.nil?
       return redirect '/login', 303
