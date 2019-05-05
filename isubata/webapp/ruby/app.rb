@@ -160,7 +160,7 @@ class App < Sinatra::Base
       <<~SQL
         SELECT
           channel.id AS channel_id,
-          haveread.id AS haveread_id
+          haveread.user_id AS haveread_user_id
         FROM channel
         LEFT OUTER JOIN haveread 
           ON channel.id = haveread.channel_id
@@ -175,7 +175,7 @@ class App < Sinatra::Base
 
       r = {}
       r['channel_id'] = channel_id
-      r['unread'] = if row['haveread_id'].nil?
+      r['unread'] = if row['haveread_user_id'].nil?
         statement = db.prepare('SELECT COUNT(*) as cnt FROM message WHERE channel_id = ?')
         statement.execute(channel_id).first['cnt']
       else
