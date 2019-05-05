@@ -149,9 +149,9 @@ class App < Sinatra::Base
       }
       r['date'] = row['message_created_at'].strftime("%Y/%m/%d %H:%M:%S")
       r['content'] = row['message_content']
+      r
     end
     response.reverse!
-    p response.first
 
     max_message_id = rows.empty? ? 0 : rows.map { |row| row['id'] }.max
     statement = db.prepare([
