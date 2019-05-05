@@ -131,9 +131,9 @@ class App < Sinatra::Base
           user.avatar_icon AS user_avatar_icon
         FROM message
         INNER JOIN user ON user.id = message.user_id
-        WHERE id > ?
+        WHERE message.id > ?
         AND channel_id = ?
-        ORDER BY id DESC LIMIT 100
+        ORDER BY message.id DESC LIMIT 100
       SQL
     )
     rows = statement.execute(last_message_id, channel_id).to_a
@@ -151,6 +151,7 @@ class App < Sinatra::Base
       r['content'] = row['message_content']
     end
     response.reverse!
+    p response
 
     max_message_id = rows.empty? ? 0 : rows.map { |row| row['id'] }.max
     statement = db.prepare([
@@ -260,7 +261,7 @@ class App < Sinatra::Base
     @self_profile = user['id'] == @user['id']
     erb :profile
   end
-  
+
   get '/add_channel' do
     if user.nil?
       return redirect '/login', 303
