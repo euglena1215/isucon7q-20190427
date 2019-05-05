@@ -39,7 +39,8 @@ class App < Sinatra::Base
     db.query("DELETE FROM image WHERE id > 1001")
     db.query("DELETE FROM channel WHERE id > 10")
     db.query("DELETE FROM message WHERE id > 10000")
-    db.query("DELETE FROM haveread")
+    RedisClient.reset_last_message_id
+    RedisClient.initialize_message_cnt(db.query("SELECT channel_id, COUNT(*) as cnt FROM message GROUP BY channel_id").to_a)
     204
   end
 
@@ -363,6 +364,7 @@ class App < Sinatra::Base
   def db_add_message(channel_id, user_id, content)
     statement = db.prepare('INSERT INTO message (channel_id, user_id, content, created_at) VALUES (?, ?, ?, NOW())')
     messages = statement.execute(channel_id, user_id, content)
+    RedisClient.incr_message_cnt(channel_id)
     statement.close
     messages
   end
