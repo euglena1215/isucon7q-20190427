@@ -261,7 +261,7 @@ class App < Sinatra::Base
     @channels, = get_channel_list_info
 
     user_name = params[:user_name]
-    statement = db.prepare('SELECT id, name, display_name, avatar_icon FROM user WHERE name = ?')
+    statement = db.prepare('SELECT * FROM user WHERE name = ?')
     @user = statement.execute(user_name).first
     statement.close
 
