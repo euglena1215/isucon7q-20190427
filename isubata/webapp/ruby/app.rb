@@ -181,17 +181,18 @@ class App < Sinatra::Base
 
     res = []
     channel_ids.each do |channel_id|
-      statement = db.prepare('SELECT * FROM haveread WHERE user_id = ? AND channel_id = ?')
-      row = statement.execute(user_id, channel_id).first
-      statement.close
+      # statement = db.prepare('SELECT * FROM haveread WHERE user_id = ? AND channel_id = ?')
+      # row = statement.execute(user_id, channel_id).first
+      # statement.close
+      last_message_id = RedisClient.get_last_message_id(user_id, channel_id)
       r = {}
       r['channel_id'] = channel_id
-      r['unread'] = if row.nil?
+      r['unread'] = if last_message_id.nil?
         statement = db.prepare('SELECT COUNT(*) as cnt FROM message WHERE channel_id = ?')
         statement.execute(channel_id).first['cnt']
       else
         statement = db.prepare('SELECT COUNT(*) as cnt FROM message WHERE channel_id = ? AND ? < id')
-        statement.execute(channel_id, row['message_id']).first['cnt']
+        statement.execute(channel_id, last_message_id).first['cnt']
       end
       statement.close
       res << r
