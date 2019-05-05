@@ -208,7 +208,7 @@ class App < Sinatra::Base
           user.display_name AS user_display_name,
           user.avatar_icon AS user_avatar_icon
         FROM message
-        LEFT OUTER JOIN user ON message.user_id = user.id
+        INNER JOIN user ON message.user_id = user.id
         WHERE channel_id = ?
         ORDER BY message.id DESC
         LIMIT ?
