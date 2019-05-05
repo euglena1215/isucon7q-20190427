@@ -185,7 +185,7 @@ class App < Sinatra::Base
           AND haveread.user_id = ?
       SQL
     )
-    rows = statement.execute(user_id)
+    rows = statement.execute(user_id).to_a
     statement.close
 
     res = rows.map do |row|
