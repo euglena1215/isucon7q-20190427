@@ -18,3 +18,4 @@ isubata/webapp/public/icons/
 .rpmdb/
 netdata/
 .bundle/cache/
+/env.sh
