@@ -41,6 +41,7 @@ class App < Sinatra::Base
     db.query("DELETE FROM channel WHERE id > 10")
     db.query("DELETE FROM message WHERE id > 10000")
     db.query("DELETE FROM haveread")
+    RedisClient.reset_last_message_id
     204
   end
 
@@ -162,6 +163,7 @@ class App < Sinatra::Base
     ].join)
     statement.execute(user_id, channel_id, max_message_id, max_message_id)
     statement.close
+    RedisClient.set_last_message_id(user_id, channel_id, max_message_id)
     content_type :json
     response.to_json
   end
