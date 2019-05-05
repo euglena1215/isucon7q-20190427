@@ -132,7 +132,7 @@ class App < Sinatra::Base
         FROM message
         INNER JOIN user ON user.id = message.user_id
         WHERE message.id > ?
-        AND channel_id = ?
+        AND message.channel_id = ?
         ORDER BY message.id DESC LIMIT 100
       SQL
     )
@@ -151,7 +151,7 @@ class App < Sinatra::Base
       r['content'] = row['message_content']
     end
     response.reverse!
-    p response
+    p response.first
 
     max_message_id = rows.empty? ? 0 : rows.map { |row| row['id'] }.max
     statement = db.prepare([
