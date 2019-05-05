@@ -181,8 +181,9 @@ class App < Sinatra::Base
         RedisClient.get_message_cnt(channel_id)
       else
         statement = db.prepare('SELECT COUNT(*) as cnt FROM message WHERE channel_id = ? AND ? < id')
-        statement.execute(channel_id, last_message_id).first['cnt']
+        cnt = statement.execute(channel_id, last_message_id).first['cnt']
         statement.close
+        cnt
       end
       res << r
     end
