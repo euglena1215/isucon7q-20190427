@@ -12,7 +12,7 @@
   <div class="col-sm-10"> <input type="file" name="avatar_icon"></input> </div>
 
   <div class="col-sm-2"></div>
-  <div class="col-sm-10"> <img class="avatar-lg" src="http://13.230.223.121/icons/<%= user['avatar_icon'] %>" alt="no avatar"> </div>
+  <div class="col-sm-10"> <img class="avatar-lg" src="/icons/<%= user['avatar_icon'] %>" alt="no avatar"> </div>
 </div>
 
 <button type="submit" class="btn btn-primary">更新</button>
@@ -28,7 +28,7 @@
 <div class="col-sm-10"> <p><%= @user['display_name'] %></p> </div>
 
 <label class="col-sm-2 col-form-label">アイコン</label>
-<div class="col-sm-10"> <img class="avatar-lg" src="http://13.230.223.121/icons/<%= @user['avatar_icon'] %>" alt="no avatar"> </div>
+<div class="col-sm-10"> <img class="avatar-lg" src="/icons/<%= @user['avatar_icon'] %>" alt="no avatar"> </div>
 </div>
 
 <% end %>
