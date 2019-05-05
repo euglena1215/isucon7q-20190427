@@ -173,8 +173,8 @@ class App < Sinatra::Base
     channel_ids = rows.map { |row| row['id'] }
 
     res = []
-    channel_ids.each do |channel_id|
-      last_message_id = RedisClient.get_last_message_id(user_id, channel_id)
+    last_message_ids = RedisClient.get_last_message_ids(user_id, channel_ids)
+    channel_ids.zip(last_message_ids) do |channel_id, last_message_id|
       r = {}
       r['channel_id'] = channel_id
       r['unread'] = if last_message_id.nil?
