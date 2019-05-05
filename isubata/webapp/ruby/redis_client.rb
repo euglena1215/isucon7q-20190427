@@ -36,6 +36,10 @@ class RedisClient
         @@redis.del(*keys)
     end
 
+    def get_message_cnt(channel_id)
+      @@redis.get(key_message_cnt(channel_id)).to_i
+    end
+
     private
 
     def key_last_message_id(user_id, channel_id)
