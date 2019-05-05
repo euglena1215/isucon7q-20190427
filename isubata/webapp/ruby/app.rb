@@ -382,7 +382,7 @@ class App < Sinatra::Base
   end
 
   def db_get_user(user_id)
-    statement = db.prepare('SELECT id FROM user WHERE id = ?')
+    statement = db.prepare('SELECT * FROM user WHERE id = ?')
     user = statement.execute(user_id).first
     statement.close
     user
