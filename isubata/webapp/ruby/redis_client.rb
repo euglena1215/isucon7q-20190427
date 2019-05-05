@@ -25,9 +25,8 @@ class RedisClient
 
     def initialize_message_cnt(rows)
       reset_message_cnt
-      rows.each do |row|
-        @@redis.set(key_message_cnt(row['channel_id']),row['cnt'])
-      end
+      key_pairs = rows.map {|row| [key_message_cnt(row['channel_id']), row['cnt']]}
+      @@redis.mset(*(key_pairs.flatten))
     end
 
     def reset_message_cnt
