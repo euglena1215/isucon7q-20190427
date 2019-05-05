@@ -2,6 +2,7 @@ require 'digest/sha1'
 require 'mysql2'
 require 'sinatra/base'
 require './image_handler'
+require './redis_client'
 
 class App < Sinatra::Base
   configure do
@@ -121,30 +122,41 @@ class App < Sinatra::Base
 
     channel_id = params[:channel_id].to_i
     last_message_id = params[:last_message_id].to_i
-    statement = db.prepare('SELECT * FROM message WHERE id > ? AND channel_id = ? ORDER BY id DESC LIMIT 100')
+    statement = db.prepare(
+      <<~SQL
+        SELECT
+          message.id AS message_id,
+          message.created_at AS message_created_at,
+          message.content AS message_content,
+          user.name AS user_name,
+          user.display_name AS user_display_name,
+          user.avatar_icon AS user_avatar_icon
+        FROM message
+        INNER JOIN user ON user.id = message.user_id
+        WHERE message.id > ?
+        AND message.channel_id = ?
+        ORDER BY message.id DESC LIMIT 100
+      SQL
+    )
     rows = statement.execute(last_message_id, channel_id).to_a
     statement.close
-    response = []
-    rows.each do |row|
+
+    response = rows.map do |row|
       r = {}
-      r['id'] = row['id']
-      statement = db.prepare('SELECT name, display_name, avatar_icon FROM user WHERE id = ?')
-      r['user'] = statement.execute(row['user_id']).first
-      r['date'] = row['created_at'].strftime("%Y/%m/%d %H:%M:%S")
-      r['content'] = row['content']
-      response << r
-      statement.close
+      r['id'] = row['message_id']
+      r['user'] = {
+        'name' => row['user_name'],
+        'display_name' => row['user_display_name'],
+        'avatar_icon' => row['user_avatar_icon']
+      }
+      r['date'] = row['message_created_at'].strftime("%Y/%m/%d %H:%M:%S")
+      r['content'] = row['message_content']
+      r
     end
     response.reverse!
 
-    max_message_id = rows.empty? ? 0 : rows.map { |row| row['id'] }.max
-    statement = db.prepare([
-      'INSERT INTO haveread (user_id, channel_id, message_id, updated_at, created_at) ',
-      'VALUES (?, ?, ?, NOW(), NOW()) ',
-      'ON DUPLICATE KEY UPDATE message_id = ?, updated_at = NOW()',
-    ].join)
-    statement.execute(user_id, channel_id, max_message_id, max_message_id)
-    statement.close
+    max_message_id = rows.empty? ? 0 : rows.map { |row| row['message_id'] }.max
+    RedisClient.set_last_message_id(user_id, channel_id, max_message_id)
     content_type :json
     response.to_json
   end
@@ -155,24 +167,22 @@ class App < Sinatra::Base
       return 403
     end
 
-    sleep 1.0
+    #sleep 2.0
 
     rows = db.query('SELECT id FROM channel').to_a
     channel_ids = rows.map { |row| row['id'] }
 
     res = []
     channel_ids.each do |channel_id|
-      statement = db.prepare('SELECT * FROM haveread WHERE user_id = ? AND channel_id = ?')
-      row = statement.execute(user_id, channel_id).first
-      statement.close
+      last_message_id = RedisClient.get_last_message_id(user_id, channel_id)
       r = {}
       r['channel_id'] = channel_id
-      r['unread'] = if row.nil?
+      r['unread'] = if last_message_id.nil?
         statement = db.prepare('SELECT COUNT(*) as cnt FROM message WHERE channel_id = ?')
         statement.execute(channel_id).first['cnt']
       else
         statement = db.prepare('SELECT COUNT(*) as cnt FROM message WHERE channel_id = ? AND ? < id')
-        statement.execute(channel_id, row['message_id']).first['cnt']
+        statement.execute(channel_id, last_message_id).first['cnt']
       end
       statement.close
       res << r
@@ -199,19 +209,36 @@ class App < Sinatra::Base
     @page = @page.to_i
 
     n = 20
-    statement = db.prepare('SELECT * FROM message WHERE channel_id = ? ORDER BY id DESC LIMIT ? OFFSET ?')
+    statement = db.prepare(
+      <<~SQL
+        SELECT
+          message.id AS message_id,
+          message.created_at AS message_created_at,
+          message.content AS message_content,
+          user.name AS user_name,
+          user.display_name AS user_display_name,
+          user.avatar_icon AS user_avatar_icon
+        FROM message
+        INNER JOIN user ON message.user_id = user.id
+        WHERE channel_id = ?
+        ORDER BY message.id DESC
+        LIMIT ?
+        OFFSET ?
+      SQL
+    )
     rows = statement.execute(@channel_id, n, (@page - 1) * n).to_a
     statement.close
-    @messages = []
-    rows.each do |row|
+    @messages = rows.map do |row|
       r = {}
-      r['id'] = row['id']
-      statement = db.prepare('SELECT name, display_name, avatar_icon FROM user WHERE id = ?')
-      r['user'] = statement.execute(row['user_id']).first
-      r['date'] = row['created_at'].strftime("%Y/%m/%d %H:%M:%S")
-      r['content'] = row['content']
-      @messages << r
-      statement.close
+      r['id'] = row['message_id']
+      r['user'] = {
+        'name' => row['user_name'],
+        'display_name' => row['user_display_name'],
+        'avatar_icon' => row['user_avatar_icon']
+      }
+      r['date'] = row['message_created_at'].strftime("%Y/%m/%d %H:%M:%S")
+      r['content'] = row['message_content']
+      r
     end
     @messages.reverse!
 
@@ -245,7 +272,7 @@ class App < Sinatra::Base
     @self_profile = user['id'] == @user['id']
     erb :profile
   end
-  
+
   get '/add_channel' do
     if user.nil?
       return redirect '/login', 303
@@ -386,10 +413,12 @@ class App < Sinatra::Base
   def get_channel_list_info(focus_channel_id = nil)
     channels = db.query('SELECT * FROM channel ORDER BY id').to_a
     description = ''
-    channels.each do |channel|
-      if channel['id'] == focus_channel_id
-        description = channel['description']
-        break
+    if focus_channel_id
+      channels.each do |channel|
+        if channel['id'] == focus_channel_id
+          description = channel['description']
+          break
+        end
       end
     end
     [channels, description]

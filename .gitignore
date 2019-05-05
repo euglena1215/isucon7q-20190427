@@ -17,3 +17,4 @@ isubata/webapp/public/icons/
 .cloud-locale-test.skip
 .rpmdb/
 netdata/
+.bundle/cache/
