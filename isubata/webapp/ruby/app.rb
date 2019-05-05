@@ -25,7 +25,9 @@ class App < Sinatra::Base
       user_id = session[:user_id]
       return nil if user_id.nil?
 
-      @_user = db_get_user(user_id)
+      statement = db.prepare('SELECT * FROM user WHERE id = ?')
+      @_user = statement.execute(user_id).first
+      statement.close
       if @_user.nil?
         params[:user_id] = nil
         return nil
@@ -110,7 +112,10 @@ class App < Sinatra::Base
     if user_id.nil? || message.nil? || channel_id.nil? || user.nil?
       return 403
     end
-    db_add_message(channel_id.to_i, user_id, message)
+    statement = db.prepare('INSERT INTO message (channel_id, user_id, content, created_at) VALUES (?, ?, ?, NOW())')
+    statement.execute(channel_id.to_i, user_id, content)
+    statement.close
+    RedisClient.incr_message_cnt(channel_id.to_i)
     204
   end
 
@@ -381,27 +386,8 @@ class App < Sinatra::Base
     end
   end
 
-  def db_get_user(user_id)
-    statement = db.prepare('SELECT * FROM user WHERE id = ?')
-    user = statement.execute(user_id).first
-    statement.close
-    user
-  end
-
-  def db_add_message(channel_id, user_id, content)
-    statement = db.prepare('INSERT INTO message (channel_id, user_id, content, created_at) VALUES (?, ?, ?, NOW())')
-    messages = statement.execute(channel_id, user_id, content)
-    RedisClient.incr_message_cnt(channel_id)
-    statement.close
-    messages
-  end
-
-  def random_string(n)
-    Array.new(20).map { (('a'..'z').to_a + ('A'..'Z').to_a + ('0'..'9').to_a).sample }.join
-  end
-
   def register(user, password)
-    salt = random_string(20)
+    salt = Array.new(20).map { (('a'..'z').to_a + ('A'..'Z').to_a + ('0'..'9').to_a).sample }.join
     pass_digest = Digest::SHA1.hexdigest(salt + password)
     statement = db.prepare('INSERT INTO user (name, salt, password, display_name, avatar_icon, created_at) VALUES (?, ?, ?, ?, ?, NOW())')
     statement.execute(user, salt, pass_digest, user, 'default.png')
