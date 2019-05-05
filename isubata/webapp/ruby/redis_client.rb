@@ -15,6 +15,10 @@ class RedisClient
       @@redis.get(key_last_message_id(user_id, channel_id))
     end
 
+    def get_last_message_ids(user_id, channel_ids)
+      @@redis.mget(*(channel_ids.map {|id| key_last_message_id(user_id, id)}))
+    end
+
     def set_last_message_id(user_id, channel_id, last_message_id)
       @@redis.set(key_last_message_id(user_id, channel_id), last_message_id)
     end
