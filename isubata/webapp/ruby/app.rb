@@ -245,6 +245,7 @@ class App < Sinatra::Base
       }
       r['date'] = row['message_created_at'].strftime("%Y/%m/%d %H:%M:%S")
       r['content'] = row['message_content']
+      r
     end
     @messages.reverse!
 
