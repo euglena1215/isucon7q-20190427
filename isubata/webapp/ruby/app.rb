@@ -194,13 +194,13 @@ class App < Sinatra::Base
       r = {}
       r['channel_id'] = channel_id
       r['unread'] = if row['haveread_user_id'].nil?
-        statement2 = db.prepare('SELECT COUNT(*) as cnt FROM message WHERE channel_id = ?')
-        statement2.execute(channel_id).first['cnt']
+        statement = db.prepare('SELECT COUNT(*) as cnt FROM message WHERE channel_id = ?')
+        statement.execute(channel_id).first['cnt']
       else
-        statement2 = db.prepare('SELECT COUNT(*) as cnt FROM message WHERE channel_id = ? AND ? < id')
-        statement2.execute(channel_id, row['message_id']).first['cnt']
+        statement = db.prepare('SELECT COUNT(*) as cnt FROM message WHERE channel_id = ? AND ? < id')
+        statement.execute(channel_id, row['message_id']).first['cnt']
       end
-      statement2.close
+      statement.close
       r
     end
 
