@@ -180,9 +180,9 @@ class App < Sinatra::Base
           channel.id AS channel_id,
           haveread.user_id AS haveread_user_id
         FROM channel
-        LEFT OUTER JOIN haveread 
+        LEFT OUTER JOIN haveread
           ON channel.id = haveread.channel_id
-          AND haveread.user_id = ?
+        WHERE haveread.user_id = ?
       SQL
     )
     rows = statement.execute(user_id).to_a
