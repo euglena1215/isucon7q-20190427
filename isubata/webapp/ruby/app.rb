@@ -2,6 +2,7 @@ require 'digest/sha1'
 require 'mysql2'
 require 'sinatra/base'
 require './image_handler'
+require './redis_client'
 
 class App < Sinatra::Base
   configure do
